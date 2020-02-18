@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+   
+<head>
+    <meta charset="utf-8">
+    <title>My test page</title>
+</head>
+
+<body>
+    <canvas id="test" width="200" height="200">
+        current stock price: $3.15 +0.15
+    </canvas>
+
+
+</body>
+
+<script>
+    /**
+    *@author wlt
+    **/
+    var canvas = document.getElementById("test");
+    var ctx = canvas.getContext("2d");
+    var life = 10;  //生命
+    var obsN = 50;  //障碍的数目
+    var ballA, lineA; //动画
+    var lastFoucsX; //上一次的鼠标焦点
+    var obs = [];  //障碍
+    var running = 0; //是否运行
+    /**
+     * 木板
+     * */
+    var board = {
+        width: 60,
+        height: 5,
+        x: 70,
+        y: 195,
+        color: "red",
+        draw: function () {
+            ctx.beginPath();
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.closePath();
+        },
+        init: function () {
+            this.x = canvas.width / 2 - this.width / 2; //初始化木板位置
+            this.y = canvas.height - this.height;
+        }
+    }
+
+    /**
+     * 小球
+     * */
+    var ball = {
+        x: canvas.width / 2,
+        y: 190,
+        vx: -5,
+        vy: -2,
+        radius: 5,
+        v: 5, //速度
+        angle: Math.PI / 6, //角度
+        color: "rgb(255,50,50)",
+        draw: function () {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.fillStyle = this.color;
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+        },
+        init: function () {
+            this.vx = -5;
+            this.vy = -2;
+            this.x = canvas.width / 2; //初始化小球的位置
+            this.y = canvas.height - this.radius - board.height;
+        }
+    }
+
+    /**
+     * 瞄准方向
+     * */
+    var line = {
+        x: 100,
+        y: 100,
+        drawLine: function () {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            addObstacle();
+            ball.draw();
+            board.draw();
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(ball.x, ball.y);
+            ctx.stroke();
+            ctx.closePath();
+        }
+    }
+    
+    /**
+     * 障碍
+     * */
+    class Obstacle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.flag = 1;
+            this.height = 10;
+            this.width = 20;
+            this.color = color;
+            this.draw = function () {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+    }
+
+    /**
+     * 判断碰撞
+     * */
+    function check() {
+        var limitX1, limitX2, limitY1, limitY2;
+        for (var i = 0; i < 50; i++) {
+            if (obs[i].flag) {
+                limitX1 = obs[i].x - ball.radius;
+                limitX2 = obs[i].x + obs[i].width + ball.radius;
+                limitY1 = obs[i].y - ball.radius;
+                limitY2 = obs[i].y + obs[i].height + ball.radius;
+                if (ball.x >= limitX1 && ball.x <= limitX2 && ball.y >= limitY1 && ball.y <= limitY2) {
+                    // alert("fff");
+                    obs[i].flag = 0;
+                    obsN--;
+                    ball.vx = -ball.vx;
+                    ball.vy = -ball.vy;
+                }
+            }
+        }
+
+    }
+    
+    /**
+     * 球、木板等初始化
+     * */
+    function init() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        board.init();
+        ball.init();
+        board.draw();
+        ball.draw();
+        addObstacle();
+        canvas.addEventListener("mousemove", handleLine);
+    }
+
+     
+    /**
+     * 障碍初始化
+     * */
+
+    function obbinit() {
+        var k = 0;
+        var w = 0;
+        var h = 0;
+        for (let i = 0; i < 5; i++) {
+            w = 0;
+            for (let j = 0; j < 10; j++) {
+                ctx.beginPath();
+                let color = "rgb(" + (255 - j * 15 - i * 10) + "," + (j * 15 + i * 10) + "," + (j * 10 + i * 10) + ")";
+                obs[k] = new Obstacle(w, h, color);
+                if (obs[k].flag)
+                    obs[k].draw();
+                ctx.closePath();
+                k++;
+                w += 20;
+            }
+            h = h + 10;
+        }
+
+    }
+    /**
+     * 障碍更新
+     * */
+
+    function addObstacle() {
+        for (var i = 0; i < 50; i++) {
+            if (obs[i].flag) {
+                obs[i].draw();
+            }
+        }
+    }
+
+    /**
+     * 渲染
+     * */
+
+    function draw() {
+        if (obsN === 0) {
+            alert("挑战成功");
+            canvas.removeEventListener("mousemove", handleMove);
+            obbinit();
+            init();
+            running = 0;
+            return 0;
+        }
+        if (running) {
+            // ctx.fillStyle = "rgba(255,255,255,0.2)"
+            // ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        //盖一层透明画布
+        // ctx.clearRect(0, 0, 200, 200);
+        board.draw();
+        addObstacle();
+        ball.draw();
+        check();
+        if (running) {
+
+            if (ball.x + ball.vx < 0 || ball.x + ball.vx > canvas.width && ball.y + ball.vy < canvas.height -
+                board
+                .height) {
+                ball.vx = -ball.vx;
+            }
+            if (ball.y > canvas.height - board.height) {
+                if ((ball.x >= board.x) && (ball.x <= board.x + board.width)) {
+                    ball.vy = -ball.vy;
+                } else {
+                    //失败复原
+                    life--;
+                    if (!life) {
+                        alert("挑战失败");
+                        obbinit();
+                    }
+                    canvas.removeEventListener("mousemove", handleMove);
+                    window.cancelAnimationFrame(ballA);
+                    init();
+                    running = 0;
+                    return 0;
+                }
+
+            }
+            if (ball.y + ball.vy < 0) {
+                ball.vy = -ball.vy;
+            }
+            if (running) {
+                ball.x = ball.x + ball.vx;
+                ball.y = ball.y + ball.vy;
+            }
+        }
+        ballA = window.requestAnimationFrame(draw);
+    }
+
+
+    /**
+     * 处理瞄准
+     * */
+
+    function handleMove(e) {
+        let x = e.clientX;
+        if (board.x + x - lastFoucsX + board.width < canvas.width) {
+            board.x = board.x + x - lastFoucsX;
+            lastFoucsX = board.x;
+        }
+    }
+
+    /**
+     * 处理点击事件
+     * */
+
+    function handleClick(e) {
+        running = 1;
+        let x = event.clientX; //初始化小球的发射角度
+        let y = event.clientY;
+        lastFoucsX = board.x + board.width / 2;
+        let tan = (ball.y - y) / (ball.x - x);
+        ball.angle = Math.atan(tan); //计算角度，通过角度计算x轴y轴的运动速度
+        if (x < ball.x) {
+            ball.vx = -Math.abs(Math.cos(ball.angle) * ball.v);
+        } else {
+            ball.vx = Math.abs(Math.cos(ball.angle) * ball.v)
+        }
+        ball.vy = -Math.abs(Math.sin(ball.angle) * ball.v);
+        canvas.removeEventListener("mousemove", handleLine);
+        canvas.removeEventListener("click", handleClick);
+        canvas.addEventListener("mousemove", handleMove);
+        ballA = window.requestAnimationFrame(draw);
+
+    }
+
+    /**
+     * 处理瞄准线
+     * */
+
+    function handleLine(e) {
+        let x = e.clientX; //初始化小球的发射角度
+        let y = e.clientY;
+        line.x = x;
+        line.y = y;
+        let tan = (ball.y - y) / (ball.x - x);
+        ball.angle = Math.atan(tan);
+        line.drawLine();
+        canvas.addEventListener("click", handleClick);
+    }
+    obbinit();
+    init();
+</script>
+
+</html>
